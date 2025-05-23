@@ -1,0 +1,38 @@
+name: Deploy Project to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    - name: Install dependencies
+      run: npm install
+    - name: Build project
+      run: npm run build
+    - name: Setup SSH key
+      uses: webfactory/ssh-agent@v0.8.1
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    - name: Sync files to VPS
+      run: |
+        rsync -avz --delete --exclude='.git*' --exclude='node_modules' --exclude='*.log' \
+        ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/myapp/
+      env:
+        RSYNC_RSH: ssh
+    - name: Restart application on VPS
+      run: |
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          cd /var/www/myapp/
+          npm install --production
+          pm2 restart your-app-name || pm2 start npm --name "cicd-deploy" -- start
+        EOF
