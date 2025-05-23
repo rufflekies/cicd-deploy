@@ -20,7 +20,7 @@ jobs:
     - name: Build project
       run: npm run build
     - name: Setup SSH key
-      uses: webfactory/ssh-agent@v0.8.1
+      uses: webfactory/ssh-agent@v0.5.3
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
     - name: Sync files to VPS
