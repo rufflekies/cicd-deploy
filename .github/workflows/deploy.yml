@@ -28,18 +28,18 @@ jobs:
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+        ssh-keyscan -p 223 -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
     - name: Sync files to VPS
       run: |
         rsync -avz --delete --exclude='.git*' --exclude='node_modules' --exclude='*.log' \
-        ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/myapp/
+        -e "ssh -p 223" ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/myapp/
       env:
         RSYNC_RSH: ssh
 
     - name: Restart application on VPS
       run: |
-        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+        ssh -p 223 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           cd /var/www/myapp/
           npm install --production
           pm2 restart cicd-deploy || pm2 start npm --name "cicd-deploy" -- start
