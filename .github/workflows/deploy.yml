@@ -11,28 +11,36 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '18'
+
     - name: Install dependencies
       run: npm install
+
     - name: Build project
       run: npm run build
-    - name: Setup SSH key
-      uses: webfactory/ssh-agent@v0.5.3
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
     - name: Sync files to VPS
       run: |
         rsync -avz --delete --exclude='.git*' --exclude='node_modules' --exclude='*.log' \
         ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/myapp/
       env:
         RSYNC_RSH: ssh
+
     - name: Restart application on VPS
       run: |
         ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           cd /var/www/myapp/
           npm install --production
-          pm2 restart your-app-name || pm2 start npm --name "cicd-deploy" -- start
+          pm2 restart cicd-deploy || pm2 start npm --name "cicd-deploy" -- start
         EOF
